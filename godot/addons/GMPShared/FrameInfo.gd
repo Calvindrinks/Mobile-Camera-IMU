@@ -4,11 +4,11 @@
 
 class_name FrameInfo extends RefCounted
 
-const DATA_BUFFER_PROPERTY: String = "buffer"
-const DATA_WIDTH_PROPERTY: String = "width"
-const DATA_HEIGHT_PROPERTY: String = "height"
-const DATA_ROTATION_PROPERTY = "rotation"
-const DATA_IS_GRAYSCALE_PROPERTY = "is_grayscale"
+const DATA_BUFFER_PROPERTY := &"buffer"
+const DATA_WIDTH_PROPERTY := &"width"
+const DATA_HEIGHT_PROPERTY := &"height"
+const DATA_ROTATION_PROPERTY := &"rotation"
+const DATA_IS_GRAYSCALE_PROPERTY := &"is_grayscale"
 
 var _data: Dictionary
 

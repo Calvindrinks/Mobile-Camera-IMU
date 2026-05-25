@@ -2,13 +2,14 @@ extends Node
 class_name CameraStreamer
 
 const NativeCameraScript := preload("res://addons/NativeCameraPlugin/NativeCamera.gd")
-const FrameInfoScript := preload("res://addons/NativeCameraPlugin/model/FrameInfo.gd")
+const FrameInfoScript := preload("res://addons/GMPShared/FrameInfo.gd")
 
 const IMAGE_HZ := 30.0
 const JPEG_QUALITY := 0.6
-const CAPTURE_WIDTH := 320
-const REQUEST_WIDTH := 640
-const REQUEST_HEIGHT := 480
+const CAPTURE_WIDTH := 3840
+const REQUEST_WIDTH := 3840
+const REQUEST_HEIGHT := 2160
+const AUTO_UPRIGHT := true
 
 var enabled := false
 var _elapsed := 0.0
@@ -34,6 +35,9 @@ func _ready() -> void:
 	_native_camera.frame_height = REQUEST_HEIGHT
 	_native_camera.frames_to_skip = 0
 	_native_camera.frame_rotation = 90
+	_native_camera.auto_upright = AUTO_UPRIGHT
+	_native_camera.scale_width = CAPTURE_WIDTH
+	_native_camera.scale_height = int(round(float(REQUEST_HEIGHT) * float(CAPTURE_WIDTH) / float(REQUEST_WIDTH)))
 	_native_camera.frame_available.connect(_on_native_frame_available)
 	add_child(_native_camera)
 
@@ -51,6 +55,10 @@ func start() -> bool:
 				request.set_camera_id(camera.get_camera_id())
 				break
 		request.set_width(REQUEST_WIDTH).set_height(REQUEST_HEIGHT).set_frames_to_skip(0).set_rotation(90).set_grayscale(false)
+		if request.has_method("set_auto_upright"):
+			request.set_auto_upright(AUTO_UPRIGHT)
+		if request.has_method("set_scale_width") and request.has_method("set_scale_height"):
+			request.set_scale_width(CAPTURE_WIDTH).set_scale_height(int(round(float(REQUEST_HEIGHT) * float(CAPTURE_WIDTH) / float(REQUEST_WIDTH))))
 		_native_camera.start(request)
 		enabled = true
 		_using_native = true
@@ -211,7 +219,11 @@ func get_debug_packet() -> Dictionary:
 		packet.merge({
 			"backend": "NativeCameraPlugin",
 			"native_has_permission": _native_camera.has_camera_permission() if _native_camera != null else false,
-			"native_has_frame": _latest_native_frame != null
+			"native_has_frame": _latest_native_frame != null,
+			"request_size": [REQUEST_WIDTH, REQUEST_HEIGHT],
+			"capture_width": CAPTURE_WIDTH,
+			"image_hz": IMAGE_HZ,
+			"auto_upright": AUTO_UPRIGHT
 		})
 		return packet
 	packet["backend"] = "CameraServer"

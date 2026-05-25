@@ -4,8 +4,8 @@
 
 class_name FrameSize extends RefCounted
 
-const DATA_WIDTH_PROPERTY = "width"
-const DATA_HEIGHT_PROPERTY = "height"
+const DATA_WIDTH_PROPERTY := &"width"
+const DATA_HEIGHT_PROPERTY := &"height"
 
 var _data: Dictionary
 

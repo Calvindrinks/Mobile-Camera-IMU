@@ -12,8 +12,9 @@ signal frame_available(a_info: RefCounted)
 
 const PLUGIN_SINGLETON_NAME: String = "NativeCameraPlugin"
 const FeedRequestScript := preload("res://addons/NativeCameraPlugin/model/FeedRequest.gd")
-const FrameInfoScript := preload("res://addons/NativeCameraPlugin/model/FrameInfo.gd")
 const CameraInfoScript := preload("res://addons/NativeCameraPlugin/model/CameraInfo.gd")
+const FrameInfoScript := preload("res://addons/GMPShared/FrameInfo.gd")
+const GmpLoggerScript := preload("res://addons/GMPShared/GmpLogger.gd")
 
 ## Width of the requested camera frame in pixels.
 @export var frame_width: int = FeedRequestScript.DEFAULT_WIDTH
@@ -26,10 +27,32 @@ const CameraInfoScript := preload("res://addons/NativeCameraPlugin/model/CameraI
 @export var frames_to_skip: int = FeedRequestScript.DEFAULT_FRAMES_TO_SKIP
 
 ## The rotation to be applied to the frame in degrees. Valid values are 0, 90, 180, and 270.
+## Ignored when [member auto_upright] is enabled.
 @export var frame_rotation: int = FeedRequestScript.DEFAULT_ROTATION
 
 ## Whether the emitted frames should be grayscale or colored.
 @export var is_grayscale: bool = false
+
+## Whether the emitted frames should be flipped horizontally (left-right mirror).
+@export var mirror_horizontal: bool = false
+
+## Whether the emitted frames should be flipped vertically (top-bottom mirror).
+@export var mirror_vertical: bool = false
+
+## Target width (pixels) to scale the frame buffer to after rotation and mirroring.
+## Set to 0 (default) to disable scaling. Both scale_width and scale_height must be
+## non-zero for scaling to take effect.
+@export var scale_width: int = FeedRequestScript.DEFAULT_SCALE_WIDTH
+
+## Target height (pixels) to scale the frame buffer to after rotation and mirroring.
+## Set to 0 (default) to disable scaling. Both scale_width and scale_height must be
+## non-zero for scaling to take effect.
+@export var scale_height: int = FeedRequestScript.DEFAULT_SCALE_HEIGHT
+
+## When enabled, each frame is automatically rotated to be upright by combining
+## the camera sensor orientation with the current device orientation.
+## When active, [member frame_rotation] is ignored.
+@export var auto_upright: bool = FeedRequestScript.DEFAULT_AUTO_UPRIGHT
 
 var _plugin_singleton: Object
 
@@ -49,7 +72,7 @@ func _update_plugin() -> void:
 			_plugin_singleton = Engine.get_singleton(PLUGIN_SINGLETON_NAME)
 			_connect_signals()
 		elif OS.has_feature("android") and not Engine.is_editor_hint():
-			log_error("%s singleton not found on this platform!" % PLUGIN_SINGLETON_NAME)
+			GmpLoggerScript.log_error("%s singleton not found on this platform!" % PLUGIN_SINGLETON_NAME)
 
 
 func _connect_signals() -> void:
@@ -64,7 +87,7 @@ func has_camera_permission() -> bool:
 	if _plugin_singleton:
 		__result = _plugin_singleton.has_camera_permission()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLoggerScript.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -73,7 +96,7 @@ func request_camera_permission() -> void:
 	if _plugin_singleton:
 		_plugin_singleton.request_camera_permission()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLoggerScript.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 
 func get_all_cameras() -> Array:
@@ -85,7 +108,7 @@ func get_all_cameras() -> Array:
 		for __camera_dict in __cameras:
 			__result.append(CameraInfoScript.new(__camera_dict))
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLoggerScript.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -99,6 +122,11 @@ func create_feed_request() -> RefCounted:
 		. set_frames_to_skip(frames_to_skip)
 		. set_rotation(frame_rotation)
 		. set_grayscale(is_grayscale)
+		. set_mirror_horizontal(mirror_horizontal)
+		. set_mirror_vertical(mirror_vertical)
+		. set_scale_width(scale_width)
+		. set_scale_height(scale_height)
+		. set_auto_upright(auto_upright)
 	)
 
 
@@ -106,14 +134,14 @@ func start(a_request: RefCounted) -> void:
 	if _plugin_singleton:
 		_plugin_singleton.start(a_request.get_raw_data())
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLoggerScript.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 
 func stop() -> void:
 	if _plugin_singleton:
 		_plugin_singleton.stop()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLoggerScript.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 
 func _on_camera_permission_granted() -> void:
@@ -126,15 +154,3 @@ func _on_camera_permission_denied() -> void:
 
 func _on_frame_available(a_dict: Dictionary) -> void:
 	frame_available.emit(FrameInfoScript.new(a_dict))
-
-
-static func log_error(a_description: String) -> void:
-	push_error("%s: %s" % [PLUGIN_SINGLETON_NAME, a_description])
-
-
-static func log_warn(a_description: String) -> void:
-	push_warning("%s: %s" % [PLUGIN_SINGLETON_NAME, a_description])
-
-
-static func log_info(a_description: String) -> void:
-	print_rich("[color=lime]%s: INFO: %s[/color]" % [PLUGIN_SINGLETON_NAME, a_description])
