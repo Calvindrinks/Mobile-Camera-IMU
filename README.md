@@ -83,7 +83,7 @@ IMG1 + uint32_le(json_header_size) + json_header + jpeg_bytes
 Debug APK 示例：
 
 ```bash
-godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.2.3.apk
+godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.3.0.apk
 ```
 
 NativeCamera Android 插件需要 Gradle Android export 才能把 `.aar` 打进 APK。`godot/android/`、`godot/builds/`、导出模板和 keystore 都是本地产物，不提交。

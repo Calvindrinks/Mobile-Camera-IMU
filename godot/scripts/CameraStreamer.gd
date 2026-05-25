@@ -6,9 +6,9 @@ const FrameInfoScript := preload("res://addons/GMPShared/FrameInfo.gd")
 
 const IMAGE_HZ := 30.0
 const JPEG_QUALITY := 0.6
-const CAPTURE_WIDTH := 3840
-const REQUEST_WIDTH := 3840
-const REQUEST_HEIGHT := 2160
+const CAPTURE_WIDTH := 1280
+const REQUEST_WIDTH := 1280
+const REQUEST_HEIGHT := 720
 const AUTO_UPRIGHT := true
 
 var enabled := false

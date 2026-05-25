@@ -42,9 +42,27 @@ text = "Waiting..."
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 28
 
-[node name="Endpoint" type="LineEdit" parent="Margin/Panel/Rows"]
+[node name="EndpointRow" type="HBoxContainer" parent="Margin/Panel/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EndpointPreset" type="OptionButton" parent="Margin/Panel/Rows/EndpointRow"]
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+item_count = 3
+selected = 0
+popup/item_0/text = "192.168.0.16"
+popup/item_0/id = 0
+popup/item_1/text = "172.168.101.40"
+popup/item_1/id = 1
+popup/item_2/text = "manual"
+popup/item_2/id = 2
+theme_override_font_sizes/font_size = 28
+
+[node name="Endpoint" type="LineEdit" parent="Margin/Panel/Rows/EndpointRow"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
+size_flags_horizontal = 3
 placeholder_text = "ws://电脑IP:8765"
 text = "ws://192.168.0.16:8765"
 theme_override_font_sizes/font_size = 28
