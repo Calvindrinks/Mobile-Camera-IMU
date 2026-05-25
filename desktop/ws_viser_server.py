@@ -55,6 +55,8 @@ class ViserPhoneScene:
         self.image_times: deque[float] = deque()
         self.last_scene_update = 0.0
         self.image_handle = None
+        self.binary_image_count = 0
+        self.last_binary_size = 0
 
     def update_from_packet(self, packet: dict[str, Any]) -> None:
         if packet.get("type") != "imu":
@@ -86,6 +88,8 @@ class ViserPhoneScene:
 
     def update_from_image(self, header: dict[str, Any], jpeg: bytes) -> None:
         now = time.time()
+        self.binary_image_count += 1
+        self.last_binary_size = len(jpeg)
         self.image_times.append(now)
         while self.image_times and now - self.image_times[0] > 1.0:
             self.image_times.popleft()
@@ -130,8 +134,14 @@ class ViserPhoneScene:
             "texture_active": packet.get("texture_active"),
             "texture_feed_id": packet.get("texture_feed_id"),
             "texture_which_feed": packet.get("texture_which_feed"),
+            "backend": packet.get("backend"),
             "last_image_size": packet.get("last_image_size"),
+            "last_jpeg_size": packet.get("last_jpeg_size"),
             "empty_image_count": packet.get("empty_image_count"),
+            "native_has_permission": packet.get("native_has_permission"),
+            "native_has_frame": packet.get("native_has_frame"),
+            "viser_image_packets": self.binary_image_count,
+            "viser_last_jpeg_size": self.last_binary_size,
         }
         text = json.dumps(compact, ensure_ascii=False)
         self.camera_debug.value = text

@@ -5,7 +5,7 @@ const NativeCameraScript := preload("res://addons/NativeCameraPlugin/NativeCamer
 const FrameInfoScript := preload("res://addons/NativeCameraPlugin/model/FrameInfo.gd")
 
 const IMAGE_HZ := 30.0
-const JPEG_QUALITY := 60.0
+const JPEG_QUALITY := 0.6
 const CAPTURE_WIDTH := 320
 const REQUEST_WIDTH := 640
 const REQUEST_HEIGHT := 480
@@ -19,6 +19,7 @@ var _latest_native_frame: RefCounted
 var _sequence := 0
 var _last_error := ""
 var _last_image_size := Vector2i.ZERO
+var _last_jpeg_size := 0
 var _empty_image_count := 0
 var _using_native := false
 
@@ -120,7 +121,10 @@ func poll(delta: float) -> Dictionary:
 
 	var jpeg := image.save_jpg_to_buffer(JPEG_QUALITY)
 	if jpeg.is_empty():
+		_last_jpeg_size = 0
+		_last_error = "empty JPEG buffer"
 		return {}
+	_last_jpeg_size = jpeg.size()
 
 	_sequence += 1
 	return {
@@ -157,7 +161,10 @@ func _poll_native(delta: float) -> Dictionary:
 
 	var jpeg: PackedByteArray = image.save_jpg_to_buffer(JPEG_QUALITY)
 	if jpeg.is_empty():
+		_last_jpeg_size = 0
+		_last_error = "empty NativeCamera JPEG buffer"
 		return {}
+	_last_jpeg_size = jpeg.size()
 
 	_sequence += 1
 	return {
@@ -196,6 +203,7 @@ func get_debug_packet() -> Dictionary:
 		"camera_status": get_status(),
 		"feed_count": CameraServer.get_feed_count(),
 		"last_image_size": [_last_image_size.x, _last_image_size.y],
+		"last_jpeg_size": _last_jpeg_size,
 		"empty_image_count": _empty_image_count,
 		"last_error": _last_error
 	}
