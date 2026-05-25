@@ -46,6 +46,8 @@ ws://192.168.0.16:8765
   "type": "imu",
   "seq": 1,
   "timestamp_msec": 123456,
+  "imu_frame": "camera_body",
+  "screen_orientation": "portrait",
   "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0],
   "gravity": [0.0, -9.8, 0.0],
   "gyroscope": [0.0, 0.0, 0.0],
@@ -54,6 +56,21 @@ ws://192.168.0.16:8765
 ```
 
 `viser` 的 scene frame API 使用 `wxyz` 四元数顺序，所以电脑端会把 Godot 的 `xyzw` 转成 `wxyz`。
+
+`gravity`、`accelerometer` 和 `gyroscope` 已在 Godot 端转换到 `camera_body`：
+
+```text
+X: Android/Godot X
+Y: -Android/Godot Y
+Z: -Android/Godot Z
+```
+
+Godot Android 源码对 `accelerometer/gravity` 和 `gyroscope` 的符号处理不同，因此发送前分别使用：
+
+```text
+accelerometer/gravity: [-godot.x,  godot.y,  godot.z]
+gyroscope:             [ godot.x, -godot.y, -godot.z]
+```
 
 图像使用 WebSocket 二进制包发送：
 

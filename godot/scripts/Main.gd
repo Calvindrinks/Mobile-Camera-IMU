@@ -101,14 +101,39 @@ func _make_packet(q: Quaternion) -> Dictionary:
 		"type": "imu",
 		"seq": sequence,
 		"timestamp_msec": Time.get_ticks_msec(),
+		"imu_frame": "camera_body",
+		"screen_orientation": _screen_orientation_name(),
 		"quaternion_xyzw": [q.x, q.y, q.z, q.w],
-		"gravity": _vec3_to_array(Input.get_gravity()),
-		"gyroscope": _vec3_to_array(Input.get_gyroscope()),
-		"accelerometer": _vec3_to_array(Input.get_accelerometer())
+		"gravity": _accel_like_to_camera_body_array(Input.get_gravity()),
+		"gyroscope": _gyro_to_camera_body_array(Input.get_gyroscope()),
+		"accelerometer": _accel_like_to_camera_body_array(Input.get_accelerometer())
 	}
 
-func _vec3_to_array(v: Vector3) -> Array:
-	return [v.x, v.y, v.z]
+func _accel_like_to_camera_body_array(v: Vector3) -> Array:
+	return [-v.x, v.y, v.z]
+
+func _gyro_to_camera_body_array(v: Vector3) -> Array:
+	return [v.x, -v.y, -v.z]
+
+func _screen_orientation_name() -> String:
+	var orientation := DisplayServer.screen_get_orientation()
+	match orientation:
+		DisplayServer.SCREEN_PORTRAIT:
+			return "portrait"
+		DisplayServer.SCREEN_REVERSE_LANDSCAPE:
+			return "reverse_landscape"
+		DisplayServer.SCREEN_REVERSE_PORTRAIT:
+			return "reverse_portrait"
+		DisplayServer.SCREEN_LANDSCAPE:
+			return "landscape"
+		DisplayServer.SCREEN_SENSOR_LANDSCAPE:
+			return "sensor_landscape"
+		DisplayServer.SCREEN_SENSOR_PORTRAIT:
+			return "sensor_portrait"
+		DisplayServer.SCREEN_SENSOR:
+			return "sensor"
+		_:
+			return "unknown:%d" % orientation
 
 func _update_status() -> void:
 	var streaming := "streaming" if stream_toggle.button_pressed else "paused"
