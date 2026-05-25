@@ -1,0 +1,72 @@
+[gd_scene load_steps=2 format=3 uid="uid://mobile_zmq_main"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="Panel" type="PanelContainer" parent="Margin"]
+layout_mode = 2
+
+[node name="Rows" type="VBoxContainer" parent="Margin/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Margin/Panel/Rows"]
+layout_mode = 2
+text = "Mobile ZMQ Viser"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 32
+
+[node name="Status" type="Label" parent="Margin/Panel/Rows"]
+layout_mode = 2
+text = "Waiting..."
+autowrap_mode = 3
+
+[node name="Endpoint" type="LineEdit" parent="Margin/Panel/Rows"]
+layout_mode = 2
+placeholder_text = "ws://电脑IP:8765"
+text = "ws://192.168.0.16:8765"
+
+[node name="Buttons" type="GridContainer" parent="Margin/Panel/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+columns = 3
+
+[node name="Connect" type="Button" parent="Margin/Panel/Rows/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Connect"
+
+[node name="Disconnect" type="Button" parent="Margin/Panel/Rows/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Disconnect"
+
+[node name="Streaming" type="CheckButton" parent="Margin/Panel/Rows/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Stream"
+
+[node name="Payload" type="Label" parent="Margin/Panel/Rows"]
+layout_mode = 2
+text = "{}"
+autowrap_mode = 3

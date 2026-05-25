@@ -1,0 +1,18 @@
+[project]
+name = "mobile-zmq"
+version = "0.1.0"
+description = "Receive Godot Android WebSocket sensor packets and visualize them with Viser."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "pyzmq>=26.0",
+    "viser>=1.0",
+    "websockets>=16.0",
+]
+
+[project.scripts]
+mobile-zmq-viser = "desktop.receiver_viser:main"
+
+[tool.uv]
+package = false
