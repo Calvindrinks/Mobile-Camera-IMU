@@ -62,6 +62,46 @@ func send_packet(packet: Dictionary) -> bool:
 		return false
 	return true
 
+func send_image_packet(packet: Dictionary) -> bool:
+	if _peer == null:
+		_last_error = "WebSocket peer not initialized."
+		return false
+
+	_peer.poll()
+	if dry_run or _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return false
+
+	var jpeg: PackedByteArray = packet.get("jpeg", PackedByteArray())
+	if jpeg.is_empty():
+		return false
+
+	var header := {
+		"type": "image",
+		"seq": packet.get("seq", 0),
+		"timestamp_msec": packet.get("timestamp_msec", 0),
+		"width": packet.get("width", 0),
+		"height": packet.get("height", 0),
+		"encoding": "jpeg"
+	}
+	var header_bytes := JSON.stringify(header).to_utf8_buffer()
+	var message := PackedByteArray()
+	message.append_array("IMG1".to_ascii_buffer())
+	message.resize(message.size() + 4)
+	var header_size := header_bytes.size()
+	var base := 4
+	message[base] = header_size & 0xff
+	message[base + 1] = (header_size >> 8) & 0xff
+	message[base + 2] = (header_size >> 16) & 0xff
+	message[base + 3] = (header_size >> 24) & 0xff
+	message.append_array(header_bytes)
+	message.append_array(jpeg)
+
+	var err := _peer.send(message)
+	if err != OK:
+		_last_error = "WebSocket send image failed: %s" % error_string(err)
+		return false
+	return true
+
 func get_status() -> String:
 	var state := _peer.get_ready_state()
 	match state:

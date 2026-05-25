@@ -2,6 +2,7 @@ extends Control
 
 const ComplementaryImuScript := preload("res://scripts/ComplementaryImu.gd")
 const WebSocketPublisherScript := preload("res://scripts/WebSocketPublisher.gd")
+const CameraStreamerScript := preload("res://scripts/CameraStreamer.gd")
 const SEND_HZ := 200.0
 const UI_HZ := 10.0
 
@@ -14,13 +15,19 @@ const UI_HZ := 10.0
 
 var imu := ComplementaryImuScript.new()
 var publisher: Node
+var camera_streamer: Node
 var elapsed := 0.0
 var ui_elapsed := 0.0
+var debug_elapsed := 0.0
 var sequence := 0
 
 func _ready() -> void:
+	if OS.has_feature("android"):
+		OS.request_permissions()
 	publisher = WebSocketPublisherScript.new()
 	add_child(publisher)
+	camera_streamer = CameraStreamerScript.new()
+	add_child(camera_streamer)
 	connect_button.pressed.connect(_connect_transport)
 	disconnect_button.pressed.connect(_disconnect_transport)
 	stream_toggle.toggled.connect(_set_streaming)
@@ -39,12 +46,21 @@ func _physics_process(delta: float) -> void:
 	var q := _update_orientation(dt)
 	var packet := _make_packet(q)
 	publisher.send_packet(packet)
+	var image_packet: Dictionary = camera_streamer.poll(dt)
+	if not image_packet.is_empty():
+		publisher.send_image_packet(image_packet)
 
 	ui_elapsed += dt
 	if ui_elapsed >= 1.0 / UI_HZ:
 		ui_elapsed = 0.0
 		payload_label.text = JSON.stringify(packet, "\t")
 		_update_status()
+
+	debug_elapsed += dt
+	if debug_elapsed >= 1.0:
+		debug_elapsed = 0.0
+		if camera_streamer != null:
+			publisher.send_packet(camera_streamer.get_debug_packet())
 
 func _connect_transport() -> void:
 	publisher.connect_pub(endpoint_edit.text.strip_edges())
@@ -56,6 +72,8 @@ func _disconnect_transport() -> void:
 	set_physics_process(false)
 	if publisher != null and publisher.has_method("disconnect_pub"):
 		publisher.disconnect_pub()
+	if camera_streamer != null:
+		camera_streamer.stop()
 	_update_status()
 
 func _set_streaming(enabled: bool) -> void:
@@ -63,8 +81,13 @@ func _set_streaming(enabled: bool) -> void:
 	if enabled:
 		elapsed = 0.0
 		ui_elapsed = 0.0
+		debug_elapsed = 0.0
 		sequence = 0
 		imu.reset()
+		if camera_streamer != null:
+			camera_streamer.start()
+	elif camera_streamer != null:
+		camera_streamer.stop()
 	_update_status()
 
 func _update_orientation(delta: float) -> Quaternion:
@@ -89,4 +112,7 @@ func _vec3_to_array(v: Vector3) -> Array:
 
 func _update_status() -> void:
 	var streaming := "streaming" if stream_toggle.button_pressed else "paused"
-	status_label.text = "%s\n%s" % [streaming, publisher.get_status()]
+	var camera_status := ""
+	if camera_streamer != null:
+		camera_status = "\n" + camera_streamer.get_status()
+	status_label.text = "%s\n%s%s" % [streaming, publisher.get_status(), camera_status]
