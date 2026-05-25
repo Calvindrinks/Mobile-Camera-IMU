@@ -1,16 +1,16 @@
 # Mobile WebSocket Viser
 
-这个仓库是一个最小可落地骨架：
+这个仓库包含两个子项目：
 
-- 手机端：Godot 4 Android app，采集 `Input.get_gravity()`、`Input.get_gyroscope()`、`Input.get_accelerometer()`，用互补滤波估计姿态四元数。
-- 通信层：Godot 内置 WebSocket，发送 JSON 包。
-- 电脑端：Python `websockets` 接收数据，用 `viser` 显示手机坐标系和姿态。
+- `godot/`：手机端 Godot 4 Android app，采集 IMU 和相机图像，通过 WebSocket 发布数据。
+- `desktop/`：电脑端 Python/uv 项目，启动 WebSocket server，并用 Viser 可视化姿态、图像和调试状态。
 
-## 电脑端运行
+## 电脑端
 
 ```bash
+cd desktop
 UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv sync
-UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv run python desktop/ws_viser_server.py --websocket-port 8765
+UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv run python ws_viser_server.py --websocket-port 8765
 ```
 
 打开 Viser 页面：
@@ -31,9 +31,9 @@ ws://电脑局域网IP:8765
 ws://192.168.0.16:8765
 ```
 
-## Godot 端运行
+## 手机端
 
-1. 用 Godot 4.6 打开本目录。
+1. 用 Godot 4.6 打开 `godot/` 目录。
 2. 运行电脑端 `desktop/ws_viser_server.py`。
 3. Android 导出时确认手机和电脑在同一网络，电脑防火墙允许 TCP `8765` 入站。
 
@@ -55,7 +55,48 @@ ws://192.168.0.16:8765
 
 `viser` 的 scene frame API 使用 `wxyz` 四元数顺序，所以电脑端会把 Godot 的 `xyzw` 转成 `wxyz`。
 
-## 下一步
+图像使用 WebSocket 二进制包发送：
 
-- 接入 Android Native Camera Plugin 后，把图像压缩成 JPEG，再用 WebSocket 二进制包或单独图像通道发送。
-- 如果需要低延迟图像流，建议 IMU 继续走 WebSocket，图像改走 WebRTC、RTSP 或 MJPEG，电脑端只把最新图像贴到 Viser `add_camera_frustum()` 或 `add_image()`。
+```text
+IMG1 + uint32_le(json_header_size) + json_header + jpeg_bytes
+```
+
+## 导出
+
+Debug APK 示例：
+
+```bash
+godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.2.0.apk
+```
+
+NativeCamera Android 插件需要 Gradle Android export 才能把 `.aar` 打进 APK。`godot/android/`、`godot/builds/`、导出模板和 keystore 都是本地产物，不提交。
+
+## CycloneDDS
+
+电脑端也提供 WebSocket 到 CycloneDDS 的本地 bridge：
+
+```bash
+brew install cyclonedds
+export CYCLONEDDS_HOME="$(brew --prefix cyclonedds)"
+```
+
+```bash
+cd desktop
+UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv run python ws_cyclonedds_bridge.py --websocket-port 8766 --domain-id 0
+```
+
+手机端 endpoint 填 `ws://电脑局域网IP:8766`。bridge 会发布：
+
+```text
+mobile/imu
+mobile/image_jpeg
+```
+
+DDS 类型定义在 `desktop/dds_types.py`，远程 `calvinhou` 端订阅时保持相同 typename 和 topic 即可。
+
+远程 Viser 查看：
+
+```bash
+cd ~/Documents/mobile_zmq_client
+UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv run python dds_viser_viewer.py --domain-id 0 --viser-port 8080
+```
