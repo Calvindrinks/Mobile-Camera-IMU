@@ -46,7 +46,7 @@ def _image_header(msg: MobileImageJpeg) -> dict:
 
 
 def run(config: DdsViserConfig) -> None:
-    scene = ViserPhoneScene(config.viser_host, config.viser_port)
+    scene = ViserPhoneScene(config.viser_host, config.viser_port, None)
     participant = DomainParticipant(config.domain_id)
     subscriber = Subscriber(participant)
     imu_reader = DataReader(

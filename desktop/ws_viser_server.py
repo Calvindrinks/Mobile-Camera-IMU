@@ -222,6 +222,10 @@ class ViserPhoneScene:
         )
         self.status = self.server.gui.add_text("Last packet", initial_value="none")
         self.image_status = self.server.gui.add_text("Last image", initial_value="none")
+        self.render_images = self.server.gui.add_checkbox(
+            "Render images",
+            initial_value=True,
+        )
         self.record_status = self.server.gui.add_text(
             "Recorder",
             initial_value=recorder.summary() if recorder is not None else "disabled",
@@ -249,6 +253,8 @@ class ViserPhoneScene:
         self.image_handle = None
         self.binary_image_count = 0
         self.last_binary_size = 0
+        self.decoded_image_count = 0
+        self.rendered_image_count = 0
 
     def update_from_packet(self, packet: dict[str, Any]) -> None:
         if packet.get("type") != "imu":
@@ -291,36 +297,54 @@ class ViserPhoneScene:
             self.image_times.popleft()
         hz = float(len(self.image_times))
 
+        should_render = bool(self.render_images.value)
+        should_record = (
+            self.recorder is not None
+            and (self.recorder.waiting_for_first_image or self.recorder.recording_active)
+        )
+        if not should_render and not should_record:
+            self.image_status.value = (
+                f"seq={header.get('seq', '?')}  "
+                f"recv={hz:0.1f} Hz  "
+                f"jpeg={len(jpeg) / 1024.0:0.1f} KiB  "
+                "render=off"
+            )
+            return
+
         try:
             image = iio.imread(jpeg)
         except Exception as exc:
             self.image_status.value = f"bad image: {exc}"
             return
+        self.decoded_image_count += 1
 
-        if self.recorder is not None:
+        if should_record and self.recorder is not None:
             self.recorder.add_image(header, image)
             self.record_status.value = self.recorder.summary()
 
         height, width = image.shape[:2]
-        render_height = 0.45
-        render_width = render_height * width / max(height, 1)
-        if self.image_handle is None:
-            self.image_handle = self.server.scene.add_image(
-                "/phone/camera",
-                image=image,
-                render_width=render_width,
-                render_height=render_height,
-                position=(0.0, 0.45, 0.45),
-                wxyz=(0.7071068, 0.7071068, 0.0, 0.0),
-                jpeg_quality=80,
-            )
-        else:
-            self.image_handle.image = image
+        if should_render:
+            render_height = 0.45
+            render_width = render_height * width / max(height, 1)
+            if self.image_handle is None:
+                self.image_handle = self.server.scene.add_image(
+                    "/phone/camera",
+                    image=image,
+                    render_width=render_width,
+                    render_height=render_height,
+                    position=(0.0, 0.45, 0.45),
+                    wxyz=(0.7071068, 0.7071068, 0.0, 0.0),
+                    jpeg_quality=80,
+                )
+            else:
+                self.image_handle.image = image
+            self.rendered_image_count += 1
 
         self.image_status.value = (
             f"seq={header.get('seq', '?')}  "
-            f"rate={hz:0.1f} Hz  "
-            f"shape={width}x{height}"
+            f"recv={hz:0.1f} Hz  "
+            f"shape={width}x{height}  "
+            f"render={'on' if should_render else 'off'}"
         )
 
     def update_debug(self, packet: dict[str, Any]) -> None:
@@ -342,6 +366,9 @@ class ViserPhoneScene:
             "native_has_frame": packet.get("native_has_frame"),
             "viser_image_packets": self.binary_image_count,
             "viser_last_jpeg_size": self.last_binary_size,
+            "viser_render_images": bool(self.render_images.value),
+            "viser_decoded_images": self.decoded_image_count,
+            "viser_rendered_images": self.rendered_image_count,
         }
         text = json.dumps(compact, ensure_ascii=False)
         self.camera_debug.value = text

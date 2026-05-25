@@ -19,54 +19,65 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 32
+theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 32
+theme_override_constants/margin_bottom = 24
 
 [node name="Panel" type="PanelContainer" parent="Margin"]
 layout_mode = 2
 
 [node name="Rows" type="VBoxContainer" parent="Margin/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 22
 
 [node name="Title" type="Label" parent="Margin/Panel/Rows"]
 layout_mode = 2
 text = "Mobile ZMQ Viser"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 46
 
 [node name="Status" type="Label" parent="Margin/Panel/Rows"]
 layout_mode = 2
 text = "Waiting..."
 autowrap_mode = 3
+theme_override_font_sizes/font_size = 28
 
 [node name="Endpoint" type="LineEdit" parent="Margin/Panel/Rows"]
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 placeholder_text = "ws://电脑IP:8765"
 text = "ws://192.168.0.16:8765"
+theme_override_font_sizes/font_size = 28
 
 [node name="Buttons" type="GridContainer" parent="Margin/Panel/Rows"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
 columns = 3
 
 [node name="Connect" type="Button" parent="Margin/Panel/Rows/Buttons"]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Connect"
+theme_override_font_sizes/font_size = 28
 
 [node name="Disconnect" type="Button" parent="Margin/Panel/Rows/Buttons"]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Disconnect"
+theme_override_font_sizes/font_size = 28
 
 [node name="Streaming" type="CheckButton" parent="Margin/Panel/Rows/Buttons"]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Stream"
+theme_override_font_sizes/font_size = 28
 
 [node name="Payload" type="Label" parent="Margin/Panel/Rows"]
 layout_mode = 2
 text = "{}"
 autowrap_mode = 3
+theme_override_font_sizes/font_size = 24

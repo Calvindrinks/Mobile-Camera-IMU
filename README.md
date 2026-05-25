@@ -83,12 +83,12 @@ IMG1 + uint32_le(json_header_size) + json_header + jpeg_bytes
 Debug APK 示例：
 
 ```bash
-godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.2.2.apk
+godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.2.3.apk
 ```
 
 NativeCamera Android 插件需要 Gradle Android export 才能把 `.aar` 打进 APK。`godot/android/`、`godot/builds/`、导出模板和 keystore 都是本地产物，不提交。
 
-相机使用 NativeCamera Plugin v3.0，请求 `3840x2160 @ 30Hz`，并启用插件端 `auto_upright`，避免在 GDScript 中逐帧旋转图像。
+相机使用 NativeCamera Plugin v3.0，请求 `3840x2160 @ 30Hz`，并启用插件端 `auto_upright`，避免在 GDScript 中逐帧旋转图像。Viser 页面提供 `Render images` 开关；关闭后仍接收图像包并统计频率，但会跳过 JPEG 解码和 Viser 图像刷新。
 
 ## CycloneDDS
 
