@@ -4,11 +4,10 @@ class_name CameraStreamer
 const NativeCameraScript := preload("res://addons/NativeCameraPlugin/NativeCamera.gd")
 const FrameInfoScript := preload("res://addons/GMPShared/FrameInfo.gd")
 
-const IMAGE_HZ := 30.0
+const DEFAULT_IMAGE_HZ := 30.0
 const JPEG_QUALITY := 0.6
-const CAPTURE_WIDTH := 1280
-const REQUEST_WIDTH := 1280
-const REQUEST_HEIGHT := 720
+const DEFAULT_REQUEST_WIDTH := 1280
+const DEFAULT_REQUEST_HEIGHT := 720
 const AUTO_UPRIGHT := true
 
 var enabled := false
@@ -23,6 +22,9 @@ var _last_image_size := Vector2i.ZERO
 var _last_jpeg_size := 0
 var _empty_image_count := 0
 var _using_native := false
+var _image_hz := DEFAULT_IMAGE_HZ
+var _request_size := Vector2i(DEFAULT_REQUEST_WIDTH, DEFAULT_REQUEST_HEIGHT)
+var _supported_resolutions: Array[Vector2i] = []
 
 func _ready() -> void:
 	if not CameraServer.camera_feeds_updated.is_connected(_on_camera_feeds_updated):
@@ -31,15 +33,63 @@ func _ready() -> void:
 		CameraServer.camera_feed_added.connect(_on_camera_feed_changed)
 	CameraServer.monitoring_feeds = true
 	_native_camera = NativeCameraScript.new()
-	_native_camera.frame_width = REQUEST_WIDTH
-	_native_camera.frame_height = REQUEST_HEIGHT
+	_native_camera.frame_width = _request_size.x
+	_native_camera.frame_height = _request_size.y
 	_native_camera.frames_to_skip = 0
 	_native_camera.frame_rotation = 90
 	_native_camera.auto_upright = AUTO_UPRIGHT
-	_native_camera.scale_width = CAPTURE_WIDTH
-	_native_camera.scale_height = int(round(float(REQUEST_HEIGHT) * float(CAPTURE_WIDTH) / float(REQUEST_WIDTH)))
+	_native_camera.scale_width = _request_size.x
+	_native_camera.scale_height = _request_size.y
 	_native_camera.frame_available.connect(_on_native_frame_available)
 	add_child(_native_camera)
+	refresh_supported_resolutions()
+
+func set_image_hz(value: float) -> void:
+	_image_hz = max(1.0, value)
+
+func set_resolution(size: Vector2i) -> void:
+	if size.x <= 0 or size.y <= 0:
+		return
+	_request_size = size
+	if _native_camera != null:
+		_native_camera.frame_width = _request_size.x
+		_native_camera.frame_height = _request_size.y
+		_native_camera.scale_width = _request_size.x
+		_native_camera.scale_height = _request_size.y
+	if enabled and _using_native:
+		stop()
+		start()
+
+func get_resolution() -> Vector2i:
+	return _request_size
+
+func refresh_supported_resolutions() -> Array[Vector2i]:
+	_supported_resolutions.clear()
+	if _native_camera == null or not Engine.has_singleton("NativeCameraPlugin"):
+		return _fallback_resolutions()
+	var cameras: Array = _native_camera.get_all_cameras()
+	var selected_camera = null
+	for camera in cameras:
+		if not camera.is_front_facing():
+			selected_camera = camera
+			break
+	if selected_camera == null and not cameras.is_empty():
+		selected_camera = cameras[0]
+	if selected_camera == null:
+		return _fallback_resolutions()
+	for size in selected_camera.get_output_sizes():
+		var resolution := Vector2i(size.get_width(), size.get_height())
+		if resolution.x > 0 and resolution.y > 0 and not _supported_resolutions.has(resolution):
+			_supported_resolutions.append(resolution)
+	_supported_resolutions.sort_custom(_compare_resolution_area_desc)
+	if _supported_resolutions.is_empty():
+		return _fallback_resolutions()
+	return _supported_resolutions.duplicate()
+
+func get_supported_resolutions() -> Array[Vector2i]:
+	if _supported_resolutions.is_empty():
+		return _fallback_resolutions()
+	return _supported_resolutions.duplicate()
 
 func start() -> bool:
 	_sequence = 0
@@ -54,11 +104,11 @@ func start() -> bool:
 			if not camera.is_front_facing():
 				request.set_camera_id(camera.get_camera_id())
 				break
-		request.set_width(REQUEST_WIDTH).set_height(REQUEST_HEIGHT).set_frames_to_skip(0).set_rotation(90).set_grayscale(false)
+		request.set_width(_request_size.x).set_height(_request_size.y).set_frames_to_skip(0).set_rotation(90).set_grayscale(false)
 		if request.has_method("set_auto_upright"):
 			request.set_auto_upright(AUTO_UPRIGHT)
 		if request.has_method("set_scale_width") and request.has_method("set_scale_height"):
-			request.set_scale_width(CAPTURE_WIDTH).set_scale_height(int(round(float(REQUEST_HEIGHT) * float(CAPTURE_WIDTH) / float(REQUEST_WIDTH))))
+			request.set_scale_width(_request_size.x).set_scale_height(_request_size.y)
 		_native_camera.start(request)
 		enabled = true
 		_using_native = true
@@ -111,7 +161,7 @@ func poll(delta: float) -> Dictionary:
 		return {}
 
 	_elapsed += delta
-	if _elapsed < 1.0 / IMAGE_HZ:
+	if _elapsed < 1.0 / _image_hz:
 		return {}
 	_elapsed = 0.0
 
@@ -123,9 +173,9 @@ func poll(delta: float) -> Dictionary:
 	_empty_image_count = 0
 	_last_image_size = image.get_size()
 
-	if image.get_width() > CAPTURE_WIDTH:
-		var target_height := int(round(float(image.get_height()) * float(CAPTURE_WIDTH) / float(image.get_width())))
-		image.resize(CAPTURE_WIDTH, target_height, Image.INTERPOLATE_BILINEAR)
+	if image.get_width() > _request_size.x:
+		var target_height := int(round(float(image.get_height()) * float(_request_size.x) / float(image.get_width())))
+		image.resize(_request_size.x, target_height, Image.INTERPOLATE_BILINEAR)
 
 	var jpeg := image.save_jpg_to_buffer(JPEG_QUALITY)
 	if jpeg.is_empty():
@@ -146,7 +196,7 @@ func poll(delta: float) -> Dictionary:
 
 func _poll_native(delta: float) -> Dictionary:
 	_elapsed += delta
-	if _elapsed < 1.0 / IMAGE_HZ:
+	if _elapsed < 1.0 / _image_hz:
 		return {}
 	_elapsed = 0.0
 
@@ -163,9 +213,9 @@ func _poll_native(delta: float) -> Dictionary:
 
 	_empty_image_count = 0
 	_last_image_size = image.get_size()
-	if image.get_width() > CAPTURE_WIDTH:
-		var target_height := int(round(float(image.get_height()) * float(CAPTURE_WIDTH) / float(image.get_width())))
-		image.resize(CAPTURE_WIDTH, target_height, Image.INTERPOLATE_BILINEAR)
+	if image.get_width() > _request_size.x:
+		var target_height := int(round(float(image.get_height()) * float(_request_size.x) / float(image.get_width())))
+		image.resize(_request_size.x, target_height, Image.INTERPOLATE_BILINEAR)
 
 	var jpeg: PackedByteArray = image.save_jpg_to_buffer(JPEG_QUALITY)
 	if jpeg.is_empty():
@@ -186,7 +236,9 @@ func _poll_native(delta: float) -> Dictionary:
 
 func get_status() -> String:
 	if _using_native:
-		return "native camera active last=%dx%d empty=%d error=%s" % [
+		return "native camera active request=%dx%d last=%dx%d empty=%d error=%s" % [
+			_request_size.x,
+			_request_size.y,
 			_last_image_size.x,
 			_last_image_size.y,
 			_empty_image_count,
@@ -220,10 +272,11 @@ func get_debug_packet() -> Dictionary:
 			"backend": "NativeCameraPlugin",
 			"native_has_permission": _native_camera.has_camera_permission() if _native_camera != null else false,
 			"native_has_frame": _latest_native_frame != null,
-			"request_size": [REQUEST_WIDTH, REQUEST_HEIGHT],
-			"capture_width": CAPTURE_WIDTH,
-			"image_hz": IMAGE_HZ,
-			"auto_upright": AUTO_UPRIGHT
+			"request_size": [_request_size.x, _request_size.y],
+			"image_hz": _image_hz,
+			"auto_upright": AUTO_UPRIGHT,
+			"supported_resolution_count": _supported_resolutions.size(),
+			"supported_resolutions": _resolution_array(_supported_resolutions)
 		})
 		return packet
 	packet["backend"] = "CameraServer"
@@ -272,3 +325,19 @@ func _describe_feed(feed: CameraFeed) -> String:
 		feed.get_datatype(),
 		str(feed.is_active())
 	]
+
+func _fallback_resolutions() -> Array[Vector2i]:
+	return [
+		Vector2i(1280, 720),
+		Vector2i(1920, 1080),
+		Vector2i(640, 480)
+	]
+
+func _compare_resolution_area_desc(a: Vector2i, b: Vector2i) -> bool:
+	return a.x * a.y > b.x * b.y
+
+func _resolution_array(resolutions: Array[Vector2i]) -> Array:
+	var result := []
+	for resolution in resolutions:
+		result.append([resolution.x, resolution.y])
+	return result

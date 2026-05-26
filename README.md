@@ -21,7 +21,13 @@ uv sync
 uv run python ws_viser_server.py --websocket-port 8765
 ```
 
-打开 Viser 页面：
+若想带录制功能
+```bash
+cd desktop
+uv run python ws_viser_server.py --websocket-port 8765 --save
+```
+
+打开 Viser 页面：默认渲染相机·
 
 ```text
 http://127.0.0.1:8080
@@ -122,7 +128,7 @@ uv run python dds_viser_viewer.py --domain-id 0 --viser-port 8080
 Debug APK 示例：
 
 ```bash
-godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.3.0.apk
+godot --path /Users/tax/Documents/mobile-zmq/godot --headless --export-debug Android builds/android/mobile_zmq_v0.3.2.apk
 ```
 
 NativeCamera Android 插件需要 Gradle Android export 才能把 `.aar` 打进 APK。`godot/android/`、`godot/builds/`、导出模板和 keystore 都是本地产物，不提交。
